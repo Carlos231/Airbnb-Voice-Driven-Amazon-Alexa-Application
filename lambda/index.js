@@ -134,8 +134,14 @@ const YesIntent = {
 
 const NoIntent = {
     canHandle(handlerInput) {
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes() || {};
+        
+        const room = sessionAttributes.hasOwnProperty('room') ? sessionAttributes.room : 0;
+        
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' 
-        && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent';
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent'
+            && (room !== 0);
     },
     handle(handlerInput) {
         const speakOutput = "Ok, keep up the good work!";
