@@ -9,12 +9,12 @@ const ADDR_PERMISSIONS = ['read::alexa:device:all:address'];
 const PERMISSIONS = ['alexa::profile:email:read', 'alexa::profile:mobile_number:read'];
 
 // For email integration
-var AWS_ACCESS_KEY_ID = "AKIAIN4S5YFN34Q34MSQ";
-var AWS_SECRET_ACCESS_KEY = "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";
+var AWS_ACCESS_KEY_ID = "something";
+var AWS_SECRET_ACCESS_KEY = "something";
 
 // Twilio Credentials
-let accountSid = 'AC2d5b69919b64f9fa7cd4af8fe15b4ef2';
-let authToken = '4b7ba4af577390c7567158666c481520';
+let accountSid = 'something';
+let authToken = 'something';
 let fromNumber = '+16235522205';
 
 const messages = {
