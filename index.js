@@ -8,14 +8,12 @@ const { SES } = require('aws-sdk');
 const ADDR_PERMISSIONS = ['read::alexa:device:all:address'];
 const PERMISSIONS = ['alexa::profile:email:read', 'alexa::profile:mobile_number:read'];
 
-// For email integration
-var AWS_ACCESS_KEY_ID = "something";
-var AWS_SECRET_ACCESS_KEY = "something";
-
-// Twilio Credentials
-let accountSid = 'something';
-let authToken = 'something';
-let fromNumber = '+16235522205';
+// Credentials saved in Environment variables in lambda
+const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
+const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const fromNumber = '+16235522205';
 
 const messages = {
   NOTIFY_MISSING_PERMISSIONS: 'Please enable Location permissions in the Amazon Alexa app.',
@@ -34,7 +32,7 @@ const LaunchRequestHandler = {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
     handle(handlerInput) {
-        const speakOutput = 'Welcome to My Housekeeper! Enter a room you are cleaning or say send a report to send a report?';
+        const speakOutput = 'Carlos Welcome to My Housekeeper! Enter a room you are cleaning or say send a report to send a report?';
         const repromptText = 'Once again, which room are you starting to clean?';
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -55,7 +53,7 @@ const CleaningRoomHandler = {
 
     },
     handle(handlerInput) {
-        
+
         const attributesManager = handlerInput.attributesManager;
         const sessionAttributes = attributesManager.getSessionAttributes() || {};
 
@@ -74,14 +72,14 @@ const GetNumRoomsHandler = {
     canHandle(handlerInput) {
         const attributesManager = handlerInput.attributesManager;
         const sessionAttributes = attributesManager.getSessionAttributes() || {};
-        
+
         const numRooms = sessionAttributes.hasOwnProperty('numRooms') ? sessionAttributes.numRooms : 0;
-        
+
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest' && (numRooms === 0);
     },
     handle(handlerInput) {
         const speakOutput = 'Hello! How many rooms are you cleaning today?';
-        
+
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .reprompt()
@@ -96,16 +94,16 @@ const PostNumRoomsHandler = {
     },
     async handle(handlerInput) {
         const numRooms = handlerInput.requestEnvelope.request.intent.slots.number.value;
-        
+
         const attributesManager = handlerInput.attributesManager;
-        
+
         const attribute = {
             "numRooms" : numRooms
         };
-        
+
         attributesManager.setPersistentAttributes(attribute);
         await attributesManager.savePersistentAttributes();
-        
+
         const speakOutput = 'Which room are you starting to clean first?';
         const repromptText = 'Once again, which room are you starting to clean?';
         return handlerInput.responseBuilder
@@ -122,11 +120,11 @@ const CaptureRoomIntentHandler = {
     },
     async handle(handlerInput) {
         const room = handlerInput.requestEnvelope.request.intent.slots.room.value;
-        
+
         const attributesManager = handlerInput.attributesManager;
         const sessionAttributes = attributesManager.getSessionAttributes() || {};
         var roomAttribute;
-        
+
         if (sessionAttributes.hasOwnProperty('rooms')) {
             roomAttribute = {
                 "numRooms" : sessionAttributes.numRooms,
@@ -139,10 +137,10 @@ const CaptureRoomIntentHandler = {
                 "currRoom" : room
             };
         }
-        
+
         attributesManager.setPersistentAttributes(roomAttribute);
         await attributesManager.savePersistentAttributes();
-        
+
         const speakOutput = `Ok, starting to clean the ${room}.`;
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -197,7 +195,7 @@ const CaptureIssueIntentHandler = {
     handle(handlerInput) {
         const room = handlerInput.requestEnvelope.request.intent.slots.room.value;
         //const number = handlerInput.requestEnvelope.request.intent.slots.number.value;
-            
+
         //const speakOutput = `Thanks, ${room} ${number} needs assistance, I'll forward the issue to the owner.`;
         const speakOutput = `Thanks, ${room} has damage, I'll forward the damage report to the owner.`;
         return handlerInput.responseBuilder
@@ -215,7 +213,7 @@ const CaptureMaintenanceIntentHandler = {
     handle(handlerInput) {
         const room = handlerInput.requestEnvelope.request.intent.slots.room.value;
         //const number = handlerInput.requestEnvelope.request.intent.slots.number.value;
-            
+
         //const speakOutput = `Thanks, ${room} ${number} needs assistance, I'll forward the issue to the owner.`;
         const speakOutput = `Thanks, ${room} needs maintenance assistance, I'll forward the request to the owner.`;
         return handlerInput.responseBuilder
@@ -370,21 +368,21 @@ const sendReport = {
       const address = await deviceAddressServiceClient.getFullAddress(deviceId);
 
       console.log('Address successfully retrieved, now responding to user.');
-      
+
       const client = serviceClientFactory.getUpsServiceClient();
-      
+
       const number = await client.getProfileMobileNumber();
       if (number == null) {
           console.log('Number un-successfully retrieved.');
       } else {
         console.log('Number successfully retrieved.');
       }
-      
-      
+
+
     //   save the profiles number
       let toNumber = number.countryCode + number.phoneNumber;
       console.log('Phone number successfully retrieved.');
-     
+
     //   save the profiles email
       const email = await client.getProfileEmail();
       if (email == null) {
@@ -392,25 +390,25 @@ const sendReport = {
       } else {
         console.log('Email successfully retrieved.');
       }
-      
+
       let response;
-      
+
       if (address.addressLine1 === null && address.stateOrRegion === null) {
         response = responseBuilder.speak(messages.NO_ADDRESS).getResponse();
       } else {
-          
+
         const userAddress = `${address.addressLine1}, ${address.stateOrRegion}, ${address.postalCode}`;
-        
+
         let message = "Dear Customer, Cleaning services has completed cleaning location: " + userAddress + " and is ready to be re-listed. Here is your cleaning report:";
 
         // send email
         try {
             // sendEmail(message, emailTo, emailFrom, subject, replyEmail);
             sendEmail(
-                message, 
+                message,
                 email,
-                'myhousekeeperskill@gmail.com', 
-                'My Housekeeper - Home at ' + userAddress + 'is ready.', 
+                'myhousekeeperskill@gmail.com',
+                'My Housekeeper - Home at ' + userAddress + 'is ready.',
                 'myhousekeeperskill@gmail.com')
             ;
         }
@@ -427,7 +425,7 @@ const sendReport = {
             console.log('Error encountered while sending an SMS');
             console.log(e);
         }
-        
+
         response = responseBuilder.speak("Success! Notifications have been sent.").getResponse();
       }
       return response;
@@ -508,10 +506,10 @@ const YesIntent = {
     canHandle(handlerInput) {
         const attributesManager = handlerInput.attributesManager;
         const sessionAttributes = attributesManager.getSessionAttributes() || {};
-        
+
         const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
-          
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' 
+
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent'
             && (room !== 0);
     },
@@ -519,37 +517,37 @@ const YesIntent = {
         const attributesManager = handlerInput.attributesManager;
         const sessionAttributes = attributesManager.getSessionAttributes() || {};
         //handlerInput.attributesManager.deletePersistentAttributes();
-        
+
         const numRooms = sessionAttributes.hasOwnProperty('numRooms') ? sessionAttributes.numRooms : 0;
         const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
         const rooms = sessionAttributes.hasOwnProperty('rooms') ? sessionAttributes.rooms : 0;
         var roomsAttribute;
-        
+
         if (rooms) {
             roomsAttribute = {
                 "numRooms" : numRooms,
                 "rooms" : rooms.concat(room)
             };
-            
+
             attributesManager.setPersistentAttributes(roomsAttribute);
         } else {
             roomsAttribute = {
                 "numRooms" : numRooms,
                 "rooms" : [ room ]
             };
-            
+
             attributesManager.setPersistentAttributes(roomsAttribute);
         }
-        
+
         attributesManager.savePersistentAttributes();
-    
+
         var speakOutput;
         if ((rooms.length + 1) === parseInt(numRooms)) {
             speakOutput = "Awesome! Thank you for your hard work. Hope you have a great rest of the day!";
         } else {
             speakOutput = "Nice work!";
         }
-    
+
         return handlerInput.responseBuilder
         .speak(speakOutput)
         .getResponse();
@@ -560,16 +558,16 @@ const NoIntent = {
     canHandle(handlerInput) {
         const attributesManager = handlerInput.attributesManager;
         const sessionAttributes = attributesManager.getSessionAttributes() || {};
-        
+
         const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
-        
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' 
+
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent'
             && (room !== 0);
     },
     handle(handlerInput) {
         const speakOutput = "Ok, keep up the good work!";
-        
+
         return handlerInput.responseBuilder
         .speak(speakOutput)
         .getResponse();
@@ -634,7 +632,7 @@ const GetAddressError = {
   },
 };
 
-// const s3PersistenceAdapter = new persistenceAdapter.S3PersistenceAdapter({ 
+// const s3PersistenceAdapter = new persistenceAdapter.S3PersistenceAdapter({
 //     bucketName: process.env.S3_PERSISTENCE_BUCKET
 // });
 
@@ -647,7 +645,7 @@ exports.handler = Alexa.SkillBuilders.custom()
     //     new persistenceAdapter.S3PersistenceAdapter({bucketName:process.env.S3_PERSISTENCE_BUCKET})
     // )
     // .withPersistenceAdapter(s3PersistenceAdapter)
-    
+
     .addRequestHandlers(
         GetNumRoomsHandler,
         CleaningRoomHandler,
