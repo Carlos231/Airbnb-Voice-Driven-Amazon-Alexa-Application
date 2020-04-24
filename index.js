@@ -15,15 +15,6 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const fromNumber = '+16235522205';
 
-const messages = {
-  NOTIFY_MISSING_PERMISSIONS: 'Please enable Location permissions in the Amazon Alexa app.',
-  NO_ADDRESS: 'It looks like you don\'t have an address set. You can set your address from the companion app.',
-  ADDRESS_AVAILABLE: 'Here is your full address: ',
-  ERROR: 'Uh Oh. Looks like something went wrong.',
-  LOCATION_FAILURE: 'There was an error with the Device Address API. Please try again.',
-  UNHANDLED: 'This skill doesn\'t support that. Please ask something else.'
-};
-
 let https = require('https');
 let queryString = require('querystring');
 
@@ -32,7 +23,7 @@ const LaunchRequestHandler = {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
     handle(handlerInput) {
-        const speakOutput = 'Carlos Welcome to My Housekeeper! Enter a room you are cleaning or say send a report to send a report?';
+        const speakOutput = 'Welcome to My Housekeeper! Enter a room you are cleaning or say send a report to send a report?';
         const repromptText = 'Once again, which room are you starting to clean?';
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -358,7 +349,7 @@ const sendReport = {
       && requestEnvelope.context.System.user.permissions.consentToken && requestEnvelope.context.System.apiAccessToken;
     if (!consentToken) {
       return responseBuilder
-        .speak(messages.NOTIFY_MISSING_PERMISSIONS)
+        .speak("Please enable Location permissions in the Amazon Alexa app.")
         .withAskForPermissionsConsentCard(PERMISSIONS)
         .getResponse();
     }
@@ -394,7 +385,7 @@ const sendReport = {
       let response;
 
       if (address.addressLine1 === null && address.stateOrRegion === null) {
-        response = responseBuilder.speak(messages.NO_ADDRESS).getResponse();
+        response = responseBuilder.speak('It looks like you don\'t have an address set. You can set your address from the companion app.').getResponse();
       } else {
 
         const userAddress = `${address.addressLine1}, ${address.stateOrRegion}, ${address.postalCode}`;
@@ -431,51 +422,7 @@ const sendReport = {
       return response;
     } catch (error) {
       if (error.name !== 'ServiceError') {
-        const response = responseBuilder.speak(messages.ERROR).getResponse();
-        return response;
-      }
-      throw error;
-    }
-  },
-};
-
-
-// retrieves users information when granted
-const getUserInformation = {
-    canHandle(handlerInput) {
-    const { request } = handlerInput.requestEnvelope;
-
-    return request.type === 'IntentRequest' && request.intent.name === 'GetInfo';
-  },
-  async handle(handlerInput) {
-    const { requestEnvelope, serviceClientFactory, responseBuilder } = handlerInput;
-
-    const consentToken = requestEnvelope.context.System.user.permissions
-      && requestEnvelope.context.System.user.permissions.consentToken;
-    if (!consentToken) {
-      return responseBuilder
-        .speak(messages.NOTIFY_MISSING_PERMISSIONS)
-        .withAskForPermissionsConsentCard(ADDR_PERMISSIONS)
-        .getResponse();
-    }
-    try {
-      const { deviceId } = requestEnvelope.context.System.device;
-      const deviceAddressServiceClient = serviceClientFactory.getDeviceAddressServiceClient();
-      const address = await deviceAddressServiceClient.getFullAddress(deviceId);
-
-      console.log('Address successfully retrieved, now responding to user.');
-
-      let response;
-      if (address.addressLine1 === null && address.stateOrRegion === null) {
-        response = responseBuilder.speak(messages.NO_ADDRESS).getResponse();
-      } else {
-        const ADDRESS_MESSAGE = `${messages.ADDRESS_AVAILABLE + address.addressLine1}, ${address.stateOrRegion}, ${address.postalCode}`;
-        response = responseBuilder.speak(ADDRESS_MESSAGE).getResponse();
-      }
-      return response;
-    } catch (error) {
-      if (error.name !== 'ServiceError') {
-        const response = responseBuilder.speak(messages.ERROR).getResponse();
+        const response = responseBuilder.speak('Uh Oh. Looks like something went wrong.').getResponse();
         return response;
       }
       throw error;
@@ -621,13 +568,13 @@ const GetAddressError = {
   handle(handlerInput, error) {
     if (error.statusCode === 403) {
       return handlerInput.responseBuilder
-        .speak(messages.NOTIFY_MISSING_PERMISSIONS)
+        .speak("Please enable Location permissions in the Amazon Alexa app.")
         .withAskForPermissionsConsentCard(ADDR_PERMISSIONS)
         .getResponse();
     }
     return handlerInput.responseBuilder
-      .speak(messages.LOCATION_FAILURE)
-      .reprompt(messages.LOCATION_FAILURE)
+      .speak('There was an error with the Device Address API. Please try again.')
+      .reprompt('There was an error with the Device Address API. Please try again.')
       .getResponse();
   },
 };
@@ -647,9 +594,9 @@ exports.handler = Alexa.SkillBuilders.custom()
     // .withPersistenceAdapter(s3PersistenceAdapter)
 
     .addRequestHandlers(
+        LaunchRequestHandler,
         GetNumRoomsHandler,
         CleaningRoomHandler,
-        LaunchRequestHandler,
         PostNumRoomsHandler,
         CaptureRoomIntentHandler,
         CaptureIssueIntentHandler,
