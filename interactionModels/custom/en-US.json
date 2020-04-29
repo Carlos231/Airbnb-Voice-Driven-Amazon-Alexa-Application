@@ -1,0 +1,322 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "my housekeeper",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "ReportCleaningIntent",
+                    "slots": [
+                        {
+                            "name": "room",
+                            "type": "AMAZON.Room"
+                        }
+                    ],
+                    "samples": [
+                        "I am beginning to clean the {room}",
+                        "I am beginning to clean room {room}",
+                        "I'm beginning to clean the {room}",
+                        "I'm beginning to clean room {room}",
+                        "beginning to clean the {room}",
+                        "beginning to clean room {room}",
+                        "beginning to clean {room}",
+                        "begin cleaning the {room}",
+                        "begin cleaning room {room}",
+                        "I am starting to clean the {room}",
+                        "I am starting to clean room {room}",
+                        "I'm starting to clean the {room}",
+                        "I'm starting to clean room {room}",
+                        "I started cleaning the {room}",
+                        "I started cleaning room {room}",
+                        "started cleaning the {room}",
+                        "started cleaning room {room}",
+                        "start cleaning the {room}",
+                        "start cleaning room {room}",
+                        "I am cleaning the {room}",
+                        "I'm cleaning the {room}",
+                        "I am cleaning room {room}",
+                        "I'm cleaning room {room}",
+                        "cleaning the {room}",
+                        "cleaning room {room}",
+                        "{room}"
+                    ]
+                },
+                {
+                    "name": "AMAZON.YesIntent",
+                    "samples": [
+                        "yeah i did finish",
+                        "yes i did finish",
+                        "yeah i did",
+                        "yes i did",
+                        "yeah i've finished cleaning",
+                        "yeah i have finished cleaning",
+                        "yes i have finished cleaning",
+                        "yes i've finished cleaning",
+                        "yeah i have finished",
+                        "yes i have finished",
+                        "yeah i've finished",
+                        "yes i've finished",
+                        "i have",
+                        "yeah i have",
+                        "yes i have",
+                        "i've finished cleaning",
+                        "i have finished cleaning",
+                        "i've finished",
+                        "i have finished",
+                        "i am done cleaning",
+                        "i'm done cleaning",
+                        "i finished cleaning",
+                        "i finished",
+                        "yeah i finished cleaning",
+                        "yes i finished cleaning",
+                        "yeah i finished",
+                        "yes i finished",
+                        "yeah i am done cleaning",
+                        "yes i am done cleaning",
+                        "yeah I'm done cleaning",
+                        "yes I'm done cleaning",
+                        "yeah i am finished",
+                        "yeah i'm finished",
+                        "yes i am finished",
+                        "yes i'm finished",
+                        "yeah i am done",
+                        "yes i am done",
+                        "yeah i'm done",
+                        "yes i'm done",
+                        "yeah",
+                        "yes"
+                    ]
+                },
+                {
+                    "name": "AMAZON.NoIntent",
+                    "samples": [
+                        "nope i haven't finished cleaning",
+                        "nope i have not finished cleaning",
+                        "nope i haven't finished",
+                        "nope i have not finished",
+                        "nope i haven't",
+                        "nope i have not",
+                        "nah i haven't finished cleaning",
+                        "nah i have not finished cleaning",
+                        "nah i haven't finished",
+                        "nah i have not finished",
+                        "nah i haven't",
+                        "nah i have not",
+                        "no i haven't finished cleaning",
+                        "no i have not finished cleaning",
+                        "no i haven't finished",
+                        "no i have not finished",
+                        "no i haven't",
+                        "no i have not",
+                        "nope i'm not done cleaning",
+                        "nope i am not done cleaning",
+                        "nope i'm not done",
+                        "nope i am not done",
+                        "nope i'm not finished",
+                        "nope i am not finished",
+                        "nope i didn't finish cleaning",
+                        "nope i did not finish cleaning",
+                        "nope i didn't finish",
+                        "nope i did not finish",
+                        "nope i didn't",
+                        "nope i did not",
+                        "nope",
+                        "nah i didn't",
+                        "nah i did not",
+                        "no i didn't",
+                        "no i did not",
+                        "nah i did not finish cleaning",
+                        "nah i didn't finish cleaning",
+                        "nah i did not finish",
+                        "nah i didn't finish",
+                        "no i did not finish cleaning",
+                        "no i didn't finish cleaning",
+                        "no i did not finish",
+                        "no i didn't finish",
+                        "no i am not finished cleaning",
+                        "no i am not done cleaning",
+                        "no i'm not finished cleaning",
+                        "no i'm not done cleaning",
+                        "no i am not done",
+                        "no i'm not done",
+                        "no i am not finished",
+                        "no i'm not finished",
+                        "nah",
+                        "no",
+                        "I am not finished",
+                        "I'm not finished",
+                        "I am not done cleaning the room",
+                        "I'm not done cleaning the room",
+                        "I am not done cleaning",
+                        "I'm not done cleaning",
+                        "I am not done",
+                        "I'm not done",
+                        "I am still cleaning the room",
+                        "I'm still cleaning the room",
+                        "I am still cleaning",
+                        "I'm still cleaning"
+                    ]
+                },
+                {
+                    "name": "sendReport",
+                    "slots": [],
+                    "samples": [
+                        "Notify Owner",
+                        "Notify owner that the house is ready",
+                        "Home is ready",
+                        "I am done with the home",
+                        "send report"
+                    ]
+                },
+                {
+                    "name": "CaptureIssueIntent",
+                    "slots": [
+                        {
+                            "name": "room",
+                            "type": "AMAZON.Room"
+                        }
+                    ],
+                    "samples": [
+                        "furniture damage in {room}",
+                        "damage in {room}",
+                        "{room} has broken furniture",
+                        "broken furniture found in {room}",
+                        "damage found in {room}",
+                        "there is damage in {room}",
+                        "{room} has damage",
+                        "there is broken furniture in {room}"
+                    ]
+                },
+                {
+                    "name": "CaptureMaintenanceIntent",
+                    "slots": [
+                        {
+                            "name": "room",
+                            "type": "AMAZON.Room"
+                        }
+                    ],
+                    "samples": [
+                        "we need help in {room}",
+                        "{room} needs help",
+                        "help is needed in {room}",
+                        "{room}",
+                        "maintenance needed in {room}",
+                        "{room} needs maintenance",
+                        "we need maintenance in {room}"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "AMAZON.Room",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "bathroom"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "toilet"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "bedroom"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "living room"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "kitchen"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "garage"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "balcony"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "storage room"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "dialog": {
+            "intents": [
+                {
+                    "name": "ReportCleaningIntent",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "room",
+                            "type": "AMAZON.Room",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1177922447892.1114342928041"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "sendReport",
+                    "confirmationRequired": true,
+                    "prompts": {
+                        "confirmation": "Confirm.Intent.687825374230"
+                    },
+                    "slots": []
+                }
+            ],
+            "delegationStrategy": "ALWAYS"
+        },
+        "prompts": [
+            {
+                "id": "Elicit.Slot.1177922447892.1114342928041",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Which room are you cleaning?"
+                    }
+                ]
+            },
+            {
+                "id": "Confirm.Intent.687825374230",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Are you sure you are ready to send a report?"
+                    }
+                ]
+            }
+        ]
+    }
+}
