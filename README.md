@@ -7,6 +7,8 @@ How to set up:
   
   In order to test please email your Amazon account email to be invited to test the application. 
   
+  Permissions required: Full Address, Email, and Phone Number.
+  
   Sign into https://developer.amazon.com/
   
   Click on My Housekeeper application
@@ -19,3 +21,6 @@ How to set up:
 
 Notifications:
   SMS andEmail: Currently in sandbox only mode meaning must have verified sender emails in order to receive an email. When ready for deployment can submit a request to Amazon in order to move out of sandbox mode.
+
+
+*Report cleaning currently linked to Lambda function in case code review would like to see it ran during code review
