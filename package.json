@@ -1,17 +1,23 @@
 {
-  "name": "my housekeeper",
+  "name": "airbnb-voice-driven-amazon-alexa-application",
   "version": "1.0.0",
-  "description": "alexa utility to report cleaning of rooms",
+  "description": "Amazon voice driven application to optimize turn-over rate at Airbnb's.",
   "main": "index.js",
+  "dependencies": {
+    "ask-sdk": "^2.8.0"
+  },
+  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Amazon Alexa",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Carlos231/Airbnb-Voice-Driven-Amazon-Alexa-Application.git"
+  },
+  "author": "",
   "license": "ISC",
-  "dependencies": {
-      "ask-sdk-core": "^2.0.7",
-      "ask-sdk-model": "^1.4.1",
-      "aws-sdk": "^2.326.0",
-      "ask-sdk-s3-persistence-adapter": "^2.0.0"
-  }
+  "bugs": {
+    "url": "https://github.com/Carlos231/Airbnb-Voice-Driven-Amazon-Alexa-Application/issues"
+  },
+  "homepage": "https://github.com/Carlos231/Airbnb-Voice-Driven-Amazon-Alexa-Application#readme"
 }

@@ -1,7 +1,16 @@
 // Application implementing SMS and Email notification as a result of an Amazon Alexa Intent request.
 var Alexa = require('ask-sdk-core');
 const { SES } = require('aws-sdk');
-// const persistenceAdapter = require('ask-sdk-s3-persistence-adapter');
+const dbdAdapter = require('ask-sdk-dynamodb-persistence-adapter');
+
+// const dbHelper = require('./helpers/dbHelper');
+const ddbTableName = 'MyHousekeeper_DB';
+
+const ddbPersistenceAdapter = new dbdAdapter.DynamoDbPersistenceAdapter({
+    tableName: ddbTableName,
+    createTable: true,
+});
+
 
 // list of permissions granted by user
 //address, email and phone number saved in alexa devices account
@@ -18,13 +27,14 @@ const fromNumber = '+16235522205';
 let https = require('https');
 let queryString = require('querystring');
 
+// introduction for the skill, asks the user if they are cleaning or to make a damage/maintenance report
 const LaunchRequestHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
     handle(handlerInput) {
         const speakOutput = 'Hello! Welcome to My Housekeeper. Are you cleaning a room, or would you like to make a damage or maintenance report?';
-        const repromptText = 'Sorry, I did not catch that. Are you cleaning a room, or would you like to make a damage or maintenance request';
+        const repromptText = 'Sorry, I did not catch that. Are you cleaning a room, or would you like to make a damage or maintenance request? You can also say help for more information';
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .reprompt(repromptText)
@@ -32,6 +42,30 @@ const LaunchRequestHandler = {
     }
 };
 
+// after user says they are cleaning, if the user has just started cleaning the house, it will ask them to list the number of rooms they are cleaning first
+const GetNumRoomsHandler = {
+    canHandle(handlerInput) {
+        // check to see if number of rooms has already been given; if yes, skip this handler
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes() || {};
+
+        const numRooms = sessionAttributes.hasOwnProperty('numRooms') ? sessionAttributes.numRooms : 0;
+
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'CleanRoomIntent'
+            && (numRooms === 0);
+    },
+    handle(handlerInput) {
+        const speakOutput = 'How many rooms are you cleaning today?';
+
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt()
+            .getResponse();
+    }
+};
+
+// after user says they are cleaning, if the user is currently/has been cleaning a room, ask if they have finished cleaning that room
 const CleaningRoomHandler = {
     canHandle(handlerInput) {
 
@@ -40,7 +74,9 @@ const CleaningRoomHandler = {
 
         const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
 
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest' && room;
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'CleanRoomIntent'
+            && room;
 
     },
     handle(handlerInput) {
@@ -59,37 +95,20 @@ const CleaningRoomHandler = {
     }
 };
 
-const GetNumRoomsHandler = {
-    canHandle(handlerInput) {
-        const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = attributesManager.getSessionAttributes() || {};
-
-        const numRooms = sessionAttributes.hasOwnProperty('numRooms') ? sessionAttributes.numRooms : 0;
-
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest' && (numRooms === 0);
-    },
-    handle(handlerInput) {
-        const speakOutput = 'Hello! How many rooms are you cleaning today?';
-
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .reprompt()
-            .getResponse();
-    }
-};
-
+// after listing the number of rooms to clean, ask which room they are cleaning
 const PostNumRoomsHandler = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-            Alexa.getIntentName(handlerInput.requestEnvelope) === 'NumRoomsIntent';
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'NumRoomsIntent';
     },
     async handle(handlerInput) {
+        // save the number of rooms from user input into the database first as numRooms
         const numRooms = handlerInput.requestEnvelope.request.intent.slots.number.value;
 
         const attributesManager = handlerInput.attributesManager;
 
         const attribute = {
-            "numRooms": numRooms
+            "numRooms" : numRooms
         };
 
         attributesManager.setPersistentAttributes(attribute);
@@ -104,12 +123,30 @@ const PostNumRoomsHandler = {
     }
 };
 
+// after user says they are cleaning, if none of the other intents apply, ask which room they are cleaning
+const StartingRoomHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'CleanRoomIntent';
+    },
+    handle(handlerInput) {
+        const speakOutput = 'Which room are you starting to clean?';
+        const repromptText = 'Once again, which room are you starting to clean?';
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(repromptText)
+            .getResponse();
+    }
+};
+
+// after user says which room they are cleaning, save room name as current room being cleaned and allow user to make a damage/maintenance request
 const CaptureRoomIntentHandler = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-            Alexa.getIntentName(handlerInput.requestEnvelope) === 'ReportCleaningIntent';
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ReportCleaningIntent';
     },
     async handle(handlerInput) {
+        // the room name is saved to the database, checking to see if there are any cleaned rooms saved and acting accordingly
         const room = handlerInput.requestEnvelope.request.intent.slots.room.value;
 
         const attributesManager = handlerInput.attributesManager;
@@ -118,25 +155,93 @@ const CaptureRoomIntentHandler = {
 
         if (sessionAttributes.hasOwnProperty('rooms')) {
             roomAttribute = {
-                "numRooms": sessionAttributes.numRooms,
-                "currRoom": room,
-                "rooms": sessionAttributes.rooms
+                "numRooms" : sessionAttributes.numRooms,
+                "currRoom" : room,
+                "rooms" : sessionAttributes.rooms
             };
-        }
-        else {
+        } else {
             roomAttribute = {
-                "numRooms": sessionAttributes.numRooms,
-                "currRoom": room
+                "numRooms" : sessionAttributes.numRooms,
+                "currRoom" : room
             };
         }
 
         attributesManager.setPersistentAttributes(roomAttribute);
         await attributesManager.savePersistentAttributes();
 
-        const speakOutput = `Ok, starting to clean the ${room}.`;
+        const speakOutput = `Ok, starting to clean the ${room}. If there is a damage or maintenance request, please report it now.`;
+        const repromptText = 'Once again, if there is a damage or maintenance request, please report it now.';
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .withShouldEndSession(true)
+            .reprompt(repromptText)
+            .getResponse();
+    }
+};
+
+// if user makes a damage request, respond with the following and allow the user to make another report
+const CaptureIssueIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'CaptureIssueIntent';
+    },
+    handle(handlerInput) {
+        const room = handlerInput.requestEnvelope.request.intent.slots.room.value;
+        //const number = handlerInput.requestEnvelope.request.intent.slots.number.value;
+
+        //const speakOutput = `Thanks, ${room} ${number} needs assistance, I'll forward the issue to the owner.`;
+        const speakOutput = `Thanks, ${room} has damage, I'll forward the damage report to the owner. If there are any other issues, please report it now.`;
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt('Is there another issue you would like to report?')
+            .getResponse();
+    }
+};
+
+
+// const CaptureIssueIntentHandler = {
+//   canHandle(handlerInput) {
+//     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+//       && handlerInput.requestEnvelope.request.intent.name === 'CaptureIssueIntentHandler';
+//   },
+//   async handle(handlerInput) {
+//     const {responseBuilder } = handlerInput;
+//     const id = handlerInput.requestEnvelope.context.System.user.id;
+//     const slots = handlerInput.requestEnvelope.request.intent.slots;
+//     const input = slots.input.value;
+//     return dbHelper.addtoReport(input, id)
+//       .then((data) => {
+//         const speechText = `You have added movie ${input}. You can say add to add another one or remove to remove movie`;
+//         return responseBuilder
+//           .speak(speechText)
+//           .reprompt("What would you like to do?")
+//           .getResponse();
+//       })
+//       .catch((err) => {
+//         console.log("Error occured while saving movie", err);
+//         const speechText = "we cannot save your movie right now. Try again!"
+//         return responseBuilder
+//           .speak(speechText)
+//           .getResponse();
+//       })
+//   },
+// };
+
+
+// if user makes a maintenance request, respond with the following and allow the user to make another report
+const CaptureMaintenanceIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'CaptureMaintenanceIntent';
+    },
+    handle(handlerInput) {
+        const room = handlerInput.requestEnvelope.request.intent.slots.room.value;
+        //const number = handlerInput.requestEnvelope.request.intent.slots.number.value;
+
+        //const speakOutput = `Thanks, ${room} ${number} needs assistance, I'll forward the issue to the owner.`;
+        const speakOutput = `Thanks, ${room} needs maintenance assistance, I'll forward the request to the owner. If there is another maintenance request, please report it now.`;
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt('Is there another maintenance request you would like to report?')
             .getResponse();
     }
 };
@@ -155,6 +260,7 @@ const HelpIntentHandler = {
             .getResponse();
     }
 };
+
 const CancelAndStopIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
@@ -168,6 +274,7 @@ const CancelAndStopIntentHandler = {
             .getResponse();
     }
 };
+
 const SessionEndedRequestHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'SessionEndedRequest';
@@ -178,43 +285,84 @@ const SessionEndedRequestHandler = {
     }
 };
 
-// Report issue
-const CaptureIssueIntentHandler = {
+// if user says they've finished cleaning their current room, save the room onto the database with the list of all other rooms cleaned
+// end message depends on whether or not it is the last room being cleaned
+const YesIntent = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-            Alexa.getIntentName(handlerInput.requestEnvelope) === 'CaptureIssueIntent';
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes() || {};
+
+        // makes sure there is a current room being cleaned
+        const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
+
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent'
+            && (room !== 0);
     },
     handle(handlerInput) {
-        const room = handlerInput.requestEnvelope.request.intent.slots.room.value;
-        //const number = handlerInput.requestEnvelope.request.intent.slots.number.value;
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes() || {};
+        //handlerInput.attributesManager.deletePersistentAttributes();
 
-        //const speakOutput = `Thanks, ${room} ${number} needs assistance, I'll forward the issue to the owner.`;
-        const speakOutput = `Thanks, ${room} has damage, I'll forward the damage report to the owner.`;
+        const numRooms = sessionAttributes.hasOwnProperty('numRooms') ? sessionAttributes.numRooms : 0;
+        const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
+        const rooms = sessionAttributes.hasOwnProperty('rooms') ? sessionAttributes.rooms : 0;
+        var roomsAttribute;
+
+        // if there are already save cleaned rooms, concat current cleaned room to list, otherwise create new list
+        if (rooms) {
+            roomsAttribute = {
+                "numRooms" : numRooms,
+                "rooms" : rooms.concat(room)
+            };
+
+            attributesManager.setPersistentAttributes(roomsAttribute);
+        } else {
+            roomsAttribute = {
+                "numRooms" : numRooms,
+                "rooms" : [ room ]
+            };
+
+            attributesManager.setPersistentAttributes(roomsAttribute);
+        }
+
+        attributesManager.savePersistentAttributes();
+
+        // if this is the last room, display goodbye message
+        var speakOutput;
+        if ((rooms.length + 1) === parseInt(numRooms)) {
+            speakOutput = "Awesome! Thank you for your hard work. Hope you have a great rest of the day!";
+        } else {
+            speakOutput = "Nice work!";
+        }
+
         return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .reprompt('Is there any other issue you would like to report?')
-            .getResponse();
+        .speak(speakOutput)
+        .getResponse();
     }
 };
 
-const CaptureMaintenanceIntentHandler = {
+// if user says they have not finished cleaning their current room, return a message and do nothing
+const NoIntent = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-            Alexa.getIntentName(handlerInput.requestEnvelope) === 'CaptureMaintenanceIntent';
+        const attributesManager = handlerInput.attributesManager;
+        const sessionAttributes = attributesManager.getSessionAttributes() || {};
+
+        // makes sure there is a current room being cleaned
+        const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
+
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent'
+            && (room !== 0);
     },
     handle(handlerInput) {
-        const room = handlerInput.requestEnvelope.request.intent.slots.room.value;
-        //const number = handlerInput.requestEnvelope.request.intent.slots.number.value;
+        const speakOutput = "Ok, keep up the good work!";
 
-        //const speakOutput = `Thanks, ${room} ${number} needs assistance, I'll forward the issue to the owner.`;
-        const speakOutput = `Thanks, ${room} needs maintenance assistance, I'll forward the request to the owner.`;
         return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .reprompt('Is there any other maintenance request you would like to report?')
-            .getResponse();
+        .speak(speakOutput)
+        .getResponse();
     }
 };
-
 
 // // Lambda Send SMS function:
 // Sends an SMS message using the Twilio API assumes permissions have been granted
@@ -335,7 +483,7 @@ function sendEmail(template, emailTo, from, subject, replyEmail) {
 
 //   Send Report
 // checks for and gets user permission to retrieve their information and then sends approprite notifications
-const sendReport = {
+const SendReport = {
     canHandle(handlerInput) {
         const { request } = handlerInput.requestEnvelope;
 
@@ -437,80 +585,8 @@ const IntentReflectorHandler = {
     }
 };
 
-const YesIntent = {
-    canHandle(handlerInput) {
-        const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = attributesManager.getSessionAttributes() || {};
-
-        const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
-
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-            Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent' &&
-            (room !== 0);
-    },
-    handle(handlerInput) {
-        const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = attributesManager.getSessionAttributes() || {};
-        //handlerInput.attributesManager.deletePersistentAttributes();
-
-        const numRooms = sessionAttributes.hasOwnProperty('numRooms') ? sessionAttributes.numRooms : 0;
-        const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
-        const rooms = sessionAttributes.hasOwnProperty('rooms') ? sessionAttributes.rooms : 0;
-        var roomsAttribute;
-
-        if (rooms) {
-            roomsAttribute = {
-                "numRooms": numRooms,
-                "rooms": rooms.concat(room)
-            };
-
-            attributesManager.setPersistentAttributes(roomsAttribute);
-        }
-        else {
-            roomsAttribute = {
-                "numRooms": numRooms,
-                "rooms": [room]
-            };
-
-            attributesManager.setPersistentAttributes(roomsAttribute);
-        }
-
-        attributesManager.savePersistentAttributes();
-
-        var speakOutput;
-        if ((rooms.length + 1) === parseInt(numRooms)) {
-            speakOutput = "Awesome! Thank you for your hard work. Hope you have a great rest of the day!";
-        }
-        else {
-            speakOutput = "Nice work!";
-        }
-
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .getResponse();
-    }
-};
-
-const NoIntent = {
-    canHandle(handlerInput) {
-        const attributesManager = handlerInput.attributesManager;
-        const sessionAttributes = attributesManager.getSessionAttributes() || {};
-
-        const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
-
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-            Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent' &&
-            (room !== 0);
-    },
-    handle(handlerInput) {
-        const speakOutput = "Ok, keep up the good work!";
-
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .getResponse();
-    }
-};
-
+// loads all information from the database for use in skill
+// if the number of rooms cleaned match the number of rooms said to be cleaned, the database will be wiped instead, assuming it is a new cleaning session
 const LoadRoomInterceptor = {
     async process(handlerInput) {
         const attributesManager = handlerInput.attributesManager;
@@ -520,15 +596,15 @@ const LoadRoomInterceptor = {
         const room = sessionAttributes.hasOwnProperty('currRoom') ? sessionAttributes.currRoom : 0;
         const rooms = sessionAttributes.hasOwnProperty('rooms') ? sessionAttributes.rooms : 0;
 
+        // if there are saved cleaned rooms, load the data
         if (rooms !== 0) {
+            // delete all data for new cleaning session if number of rooms cleaned matches numRooms listed, otherwise load data
             if (rooms.length === parseInt(numRooms)) {
                 handlerInput.attributesManager.deletePersistentAttributes();
-            }
-            else {
+            } else {
                 attributesManager.setSessionAttributes(sessionAttributes);
             }
-        }
-        else {
+        } else {
             attributesManager.setSessionAttributes(sessionAttributes);
         }
     }
@@ -566,25 +642,21 @@ const ProfileError = {
     },
 };
 
-// const s3PersistenceAdapter = new persistenceAdapter.S3PersistenceAdapter({
-//     bucketName: process.env.S3_PERSISTENCE_BUCKET
-// });
-
 // The SkillBuilder acts as the entry point for your skill, routing all request and response
 // payloads to the handlers above. Make sure any new handlers or interceptors you've
 // defined are included below. The order matters - they're processed top to bottom.
-exports.handler = Alexa.SkillBuilders.custom()
-    // .withApiClient(new Alexa.DefaultApiClient())
-    // .withPersistenceAdapter(
-    //     new persistenceAdapter.S3PersistenceAdapter({bucketName:process.env.S3_PERSISTENCE_BUCKET})
-    // )
-    // .withPersistenceAdapter(s3PersistenceAdapter)
+const skillBuilder = Alexa.SkillBuilders.custom();
 
+exports.handler = skillBuilder
+
+    .withPersistenceAdapter(ddbPersistenceAdapter)
+    // handlers will be called in this order
     .addRequestHandlers(
         LaunchRequestHandler,
         GetNumRoomsHandler,
         CleaningRoomHandler,
         PostNumRoomsHandler,
+        StartingRoomHandler,
         CaptureRoomIntentHandler,
         CaptureIssueIntentHandler,
         CaptureMaintenanceIntentHandler,
@@ -593,13 +665,9 @@ exports.handler = Alexa.SkillBuilders.custom()
         SessionEndedRequestHandler,
         YesIntent,
         NoIntent,
-        sendReport,
+        SendReport,
         IntentReflectorHandler, // make sure IntentReflectorHandler is last so it doesn't override your custom intent handlers
     )
-    // .addRequestInterceptors(
-    //     LoadRoomInterceptor
-    // )
-    .withApiClient(new Alexa.DefaultApiClient())
     .addErrorHandlers(ProfileError)
-
+    .withApiClient(new Alexa.DefaultApiClient())
     .lambda();
