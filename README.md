@@ -67,7 +67,28 @@ Amazon voice driven application to optimize turn-over rate at Airbnb's.
         - This will notify the account owner that their home is finished cleaning and that an email has been sent with a report using the amazon account linked to alexa device in home.
     
 ### Send a report:
-    In order to send notifications through the Alexa Developer Console the user must enable permissions through the Alexa mobile application. For more information on how to download the app click [here](https://www.amazon.com/gp/help/customer/display.html?nodeId=GMR4JYXHYDSTNQRK). The first thing you will need to do is enable permissions. You can do so by opening the Alexa app on your phone clicking the side menu bar to expand it and clicking on "Skills & Games". Next click on "Your Skills" and then look for the "My Housekeeper". In our case it will be under the "dev" menu since the application is still in development face. Once you see My Housekeeper, look for Settings and click on it to grant the My Housekeeper account permissions needed to send notifications to the account owner. Please enable: Device address, Email number, and mobile number. My Housekeeper will only use this information to send appropriate notifications as requested by the user and is never saved or shared to anyone.
+  In order to send notifications through the Alexa Developer Console the user must enable permissions through the Alexa mobile application. For more information on how to download the app click [here](https://www.amazon.com/gp/help/customer/display.html?nodeId=GMR4JYXHYDSTNQRK). The first thing you will need to do is enable permissions. You can do so by opening the Alexa app on your phone clicking the side menu bar to expand it and clicking on "Skills & Games". Next click on "Your Skills" and then look for the "My Housekeeper". In our case it will be under the "dev" menu since the application is still in development face. Once you see My Housekeeper, look for Settings and click on it to grant the My Housekeeper account permissions needed to send notifications to the account owner. Please enable: Device address, Email number, and mobile number. My Housekeeper will only use this information to send appropriate notifications as requested by the user and is never saved or shared to anyone.
+
+## Script for User Guide:
+    open my housekeeper
+      Hello! Welcome to My Housekeeper. Are you cleaning a room, or would you like to make a damage or maintenance report?
+    I’m starting to clean*
+      How many rooms are you cleaning today?
+    two*
+      Which room are you starting to clean first?
+    starting the kitchen*
+      Ok, starting to clean the kitchen. If there is a damage or maintenance request, please report it now.
+    <optional to report>
+    stop
+      Goodbye!
+    open my housekeeper
+      Hello! Welcome to My Housekeeper. Are you cleaning a room, or would you like to make a damage or maintenance report?
+    cleaning*
+      Welcome back! It looks like you were cleaning the kitchen. Did you finish cleaning that room?
+    yes*
+    Nice work!
+*note: answers can vary
+
 
 ## Recommended Technical Resources for Learning More
 
@@ -77,9 +98,9 @@ Amazon voice driven application to optimize turn-over rate at Airbnb's.
 
 [Code Review Feedback](https://github.com/Carlos231/Airbnb-Voice-Driven-Amazon-Alexa-Application/blob/master/Assignments/Code%20Review%20Response%20for%20CS6.pdf)
   
-  Key Changes:
-    - More documentation
-    - More testing included such as unit tests
-    - Some function restructure 
+Key Changes:
+  - More documentation
+  - More testing included such as unit tests
+  - Some function restructure 
 
 
